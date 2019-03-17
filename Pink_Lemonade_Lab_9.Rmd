@@ -1,0 +1,333 @@
+---
+title: "Pink Lemonade Lab 9"
+author: "Pink Lemonade-Lucas Brack, Jon Guay, Harold Chang, Max Ward"
+date: "March 17, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(lubridate)
+library(OpenStreetMap)
+library(stringr)
+library(data.table)
+library(forcats)
+```
+
+#Team Portion
+
+#individual
+
+###Lucas Brack
+##Who take the bikes for longer rides, members or casual users?
+
+```{r,results="hide"}
+locations <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+locations
+
+data <- read_csv("Nice_ride_trip_history_2017_season.csv")%>%
+  separate(`Start date`, into=c("Startingdate" , "Start Time"), sep=" ")%>%
+  separate(`Start Time`, int=c("Startinghour", "Startingminute"))%>%
+  transmute(Time=`Total duration (Seconds)`/60,type=`Account type`)%>%
+  filter(type!="Inconnu")%>%
+  filter(Time<5000)
+data
+
+```
+
+```{r}
+
+ggplot(data=data)+
+  geom_boxplot(mapping=aes(y=Time, x=type, fill=type))+
+  facet_grid(~type)+
+  labs(title="Casual members take longer rides",x="Time(mintues)")
+```
+
+Casual users take the bikes for longer bike rides, with some extreme values, like the rider who had the bike for 131 days. Both have a median near 0, but the casuak users have a much higher spread, having ride times that strech all way from 0 to 5000 minutes. 
+
+###Max Ward
+```{r, results="hide"}
+
+Station <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+
+Station
+
+Trip <- read_csv("Nice_ride_trip_history_2017_season.csv")
+
+Trip
+
+```
+
+```{r,results="hide"}
+
+colnames(Trip)[colnames(Trip)=="Start station number"] <- "Number"
+
+colnames(Trip)[colnames(Trip)=="Total duration (Seconds)"] <- "Time"
+
+Trip
+
+```
+
+```{r, results="hide"}
+
+merged.data <- merge(Station, Trip, by="Number")
+
+view(merged.data)
+
+```
+
+##Where about in the area is the longest average rides? 
+
+```{r}
+
+merged.data%>%
+
+  select(Longitude, Time)%>%
+
+  group_by(Longitude) %>% 
+
+  summarise(
+
+    avg_Time = mean(Time/60/60, na.rm = TRUE),
+
+    n = n()) %>%
+
+  ggplot(mapping = aes(Longitude, avg_Time, fill = Longitude)) +
+
+    geom_smooth()+
+
+  labs(title="Average ride time vs Location",y="Average Time(hours)")
+
+```
+
+If you look at the graph and if you look at the map the longest are the ones that are not located in the middle of the cities. The longest ones are the ones that are more between the main areas. I used many functions such as colnames, merged.data, and then basic summerise, grouping and select. 
+
+###Jon Guay
+```{r}
+Stations <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+
+History <- read_csv("Nice_ride_trip_history_2017_season.csv")
+
+
+
+
+
+CombinedTable <- left_join(History,Stations, by = c("Start station" = "Name"))
+
+setnames(CombinedTable, old = c("Latitude", "Longitude"), new = c("Starting Latitude", "Starting Longitude"))         
+
+
+
+newstations <- select(Stations, "Name", "Latitude", "Longitude")
+
+Finaljoin <- left_join(CombinedTable,newstations, by = c("End station" = "Name"))
+
+setnames(Finaljoin, old = c("Latitude", "Longitude"), new = c("Ending Latitude", "Ending Longitude"))   
+
+Finaldata <- select(Finaljoin, -"Number")
+
+
+
+```
+
+
+```{r,echo=FALSE,message = FALSE,warning=FALSE}
+
+# Set latitudes and longitudes of city map
+
+LAT1 <- 44.88     # Do not change
+
+LAT2 <- 45.05     # Do not change
+
+LON1 <- -93.35    # Do not change
+
+LON2 <- -93.08    # Do not change
+
+
+
+# Generate map
+
+map <- openmap(c(LAT2,LON1), c(LAT1,LON2), zoom = NULL, # Can change zoom
+
+               type = "esri",                           # Can change
+
+               mergeTiles = TRUE)                       # Do not change
+
+
+
+# Project map to latitude and longitude
+
+map.latlon <- openproj(map, projection = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") # Do not change
+
+
+
+# Plot map of Minneapolis
+
+autoplot(map.latlon) +
+
+  geom_point(data=Finaldata, 
+
+             aes(x=`Starting Longitude`, y=`Starting Latitude`), 
+
+             color = 'blue', size = 1) +
+
+  labs(x='Longitude', y='Latitude') +
+
+  ggtitle('Locations of NiceRide Stations')# Plots a map 
+
+```
+
+```{r,echo=FALSE,message = FALSE,warning=FALSE}
+
+test <- separate(Finaldata,"Start date", into = "Month", sep = "/")
+
+ggplot(data = test) +
+
+  geom_bar(mapping = aes(x = Month, fill = Month))
+
+#As seen here, the summer and spring seasons have significant more riders than fall and winter.
+
+secondtest <- filter(test, `Account type` == "Member") %>%
+
+  summarise(count = n())
+
+thirdtest <- filter(test, `Account type` != "Member") %>%
+
+  summarise(count = n())
+
+table <- cbind(secondtest, thirdtest)
+
+colnames(table) <- c("Members", "Casual")
+
+table
+
+
+
+```
+
+##How does winter affect the bike routes used as opposed to other seasons?
+
+As seen here, the summer and spring seasons have significant more riders than fall and winter.
+
+From the table I created we can clearly see that members generate much more revenue than causuals, based on the sheer greater number of rides(nearly 100,000)
+
+###Harold Chang
+```{r,results="hide"}
+
+lacation<-read_csv("Nice_Ride_2017_Station_Locations.csv")
+
+season<-read_csv("Nice_ride_trip_history_2017_season.csv")
+
+```
+
+```{r,results="hide"}
+
+lacation$`Start station number` <- lacation$`Number`
+
+lacation$Number <- NULL
+
+newdata <- full_join(season,lacation,by = "Start station number")
+
+head(newdata)
+
+```
+
+```{r,results="hide"}
+
+seasonstring<-season%>%
+select("Account type")
+
+```
+
+```{r,results="hide"}
+
+seasonstring<-str_detect(seasonstring, "M")
+
+```
+
+```{r,results="hide"}
+
+season$`Account` <- season$`Account type`
+
+season$`Account type` <- NULL
+
+relig_summary <- season %>%
+
+  group_by(Account) %>%
+
+  summarise(sec = mean(`Total duration (Seconds)`,secount = count(`Total duration (Seconds)`)))
+
+
+
+ggplot(relig_summary, aes(sec, Account)) + geom_point()
+
+```
+
+```{r,results="hide"}
+
+season$`Start` <- season$`Start date`
+
+season$'Start date' <- NULL
+
+```
+
+```{r,results="hide"}
+
+popmonth <- season %>%
+
+  group_by(Month) %>%
+
+  summarise(total=n())
+popmonth
+
+```
+
+```{r,results="hide"}
+
+ggplot(data = popmonth) +
+
+  geom_bar(mapping = aes(x = Month, y = total), stat = "identity")
+
+```
+
+```{r,results="hide"}
+
+popdate <- season %>%
+
+  group_by(Day) %>%
+
+  summarise(all=n())%>%
+
+  arrange(desc(Day))
+
+```
+
+```{r,results="hide"}
+
+ggplot(data = popdate) + 
+
+  geom_point(mapping = aes(x = Day, y = all))
+
+
+```
+
+Question 1: Do casual member? tend to rent the bike longer?
+
+Finding: Absoulutely, as you can see from the chart, "Casual" members rent the bikes four times longer than the members, which make sense, because onlypeople who are very into biking will become the bike, which means most of them probably have their own bikes already.
+
+
+Question 2: Which month is thier most profitable period vs the least profitable period.(By comparing the duration of the retals)
+
+
+Finding: July is probably the most profitable month for the rental company; whereas, there aren't many people rent the bike on November. From this analysis, I would be able to know that summer is the season for biking, and winter is not. The rental company can come up more activities in the winter to attract their members coming over during the winter season.
+
+Question 3: Similiar to question 2, I would like to know what date is the most popular day for biking.
+
+Finding: From the chart I made on the above, I would made the conclusion that people are not very persistent of what they are doing, which is the reason why many failed on losing weight. From the chart, I am able to tell that the first couple days bikers were very active, while days after the activism dramatically went down. This cycle came up over and over again. So I would assume that bikers arent very persistent, similar to people who wanted to drop their weight tended to work very hard for the first couple days, then wanted to take a break after that.
+
+### What Each Person did
+Lucas-His individual part and cleaned up format for the whole lab
+Harold-Individual work, asked for instructions clearence, check the format before submitting the group work.
+Max-Individual part
+Jon-Individual part
