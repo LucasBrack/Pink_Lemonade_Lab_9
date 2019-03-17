@@ -1,0 +1,74 @@
+---
+title: "Lab 9"
+author: "Lucas Brack"
+date: "March 17, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(lubridate)
+library(OpenStreetMap)
+library(stringr)
+locations <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+locations
+
+```
+
+```{r}
+data <- read_csv("Nice_ride_trip_history_2017_season.csv")%>%
+  separate(`Start date`, into=c("Startingdate" , "Start Time"), sep=" ")%>%
+  separate(`Start Time`, int=c("Startinghour", "Startingminute"))%>%
+  transmute(Time=`Total duration (Seconds)`/60,type=`Account type`)%>%
+  filter(type!="Inconnu")%>%
+  filter(Time<5000)
+data
+```
+
+```{r}
+LAT1 <- 44.88     
+LAT2 <- 45.05     
+LON1 <- -93.35    
+LON2 <- -93.08    
+
+
+map <- openmap(c(LAT2,LON1), c(LAT1,LON2), zoom = NULL, 
+               type = "esri",                           
+               mergeTiles = TRUE)                       
+
+
+map.latlon <- openproj(map, projection = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") 
+
+autoplot(map.latlon) 
+
+```
+
+```{r}
+autoplot(map.latlon) + 
+  geom_point(data=locations, 
+               aes(x=Longitude, y=Latitude), 
+               color = 'blue', size = 1) +
+  labs(x='Longitude', y='Latitude') +
+  ggtitle('Locations of NiceRide Stations')
+```
+
+##Who take the bikes for longer rides, members or casual users?
+
+```{r}
+data <- read_csv("Nice_ride_trip_history_2017_season.csv")%>%
+  separate(`Start date`, into=c("Startingdate" , "Start Time"), sep=" ")%>%
+  separate(`Start Time`, int=c("Startinghour", "Startingminute"))%>%
+  transmute(Time=`Total duration (Seconds)`/60,type=`Account type`)%>%
+  filter(type!="Inconnu")%>%
+  filter(Time<5000)
+data
+
+ggplot(data=data)+
+  geom_boxplot(mapping=aes(y=Time, x=type, fill=type))+
+  facet_grid(~type)+
+  labs(title="Casual members take longer rides",x="Time(mintues)")
+```
+
+Casual users take the bikes for longer bike rides, with some extreme values, like the rider who had the bike for 131 days. Both have a median near 0, but the casuak users have a much higher spread, having ride times that strech all way from 0 to 5000 minutes. 
