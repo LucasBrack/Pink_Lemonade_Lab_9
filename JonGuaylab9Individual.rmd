@@ -1,0 +1,70 @@
+```{r,echo=FALSE,message = FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(OpenStreetMap)
+library(data.table)
+Stations <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+History <- read_csv("Nice_ride_trip_history_2017_season.csv")
+
+
+CombinedTable <- left_join(History,Stations, by = c("Start station" = "Name"))
+setnames(CombinedTable, old = c("Latitude", "Longitude"), new = c("Starting Latitude", "Starting Longitude"))         
+
+newstations <- select(Stations, "Name", "Latitude", "Longitude")
+Finaljoin <- left_join(CombinedTable,newstations, by = c("End station" = "Name"))
+setnames(Finaljoin, old = c("Latitude", "Longitude"), new = c("Ending Latitude", "Ending Longitude"))   
+Finaldata <- select(Finaljoin, -"Number")
+
+```
+
+
+
+
+
+
+```{r,echo=FALSE,message = FALSE,warning=FALSE}
+# Set latitudes and longitudes of city map
+LAT1 <- 44.88     # Do not change
+LAT2 <- 45.05     # Do not change
+LON1 <- -93.35    # Do not change
+LON2 <- -93.08    # Do not change
+
+# Generate map
+map <- openmap(c(LAT2,LON1), c(LAT1,LON2), zoom = NULL, # Can change zoom
+               type = "esri",                           # Can change
+               mergeTiles = TRUE)                       # Do not change
+
+# Project map to latitude and longitude
+map.latlon <- openproj(map, projection = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs") # Do not change
+
+# Plot map of Minneapolis
+autoplot(map.latlon) +
+  geom_point(data=Finaldata, 
+             aes(x=`Starting Longitude`, y=`Starting Latitude`), 
+             color = 'blue', size = 1) +
+  labs(x='Longitude', y='Latitude') +
+  ggtitle('Locations of NiceRide Stations')# Plots a map 
+```
+
+ 
+```{r,echo=FALSE,message = FALSE,warning=FALSE}
+test <- separate(Finaldata,"Start date", into = "Month", sep = "/")
+ggplot(data = test) +
+  geom_bar(mapping = aes(x = Month, fill = Month))
+#As seen here, the summer and spring seasons have significant more riders than fall and winter.
+secondtest <- filter(test, `Account type` == "Member") %>%
+  summarise(count = n())
+thirdtest <- filter(test, `Account type` != "Member") %>%
+  summarise(count = n())
+table <- cbind(secondtest, thirdtest)
+colnames(table) <- c("Members", "Casual")
+table
+
+```
+
+How does winter affect the bike routes used as opposed to other seasons
+
+As seen here, the summer and spring seasons have significant more riders than fall and winter.
+
+
+From the table I created we can clearly see that members generate much more revenue than causuals, based on the sheer greater number of rides(nearly 100,000)
