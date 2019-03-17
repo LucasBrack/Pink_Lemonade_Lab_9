@@ -1,0 +1,50 @@
+---
+title: "Lab 9 in class"
+author: "Max Ward"
+date: "3/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(data.table)
+
+```
+
+```{r}
+Station <- read_csv("Nice_Ride_2017_Station_Locations.csv")
+Station
+Trip <- read_csv("Nice_ride_trip_history_2017_season.csv")
+Trip
+```
+
+```{r}
+colnames(Trip)[colnames(Trip)=="Start station number"] <- "Number"
+colnames(Trip)[colnames(Trip)=="Total duration (Seconds)"] <- "Time"
+Trip
+```
+
+```{r}
+merged.data <- merge(Station, Trip, by="Number")
+view(merged.data)
+```
+
+***Where about in the area is the longest average rides? 
+
+```{r}
+merged.data%>%
+  select(Longitude, Time)%>%
+  group_by(Longitude) %>% 
+  summarise(
+    avg_Time = mean(Time, na.rm = TRUE),
+    n = n()) %>%
+  ggplot(mapping = aes(Longitude, avg_Time, fill = Longitude)) +
+    geom_smooth()+
+  labs(title="Average ride time vs Location",y="Average Time(mintues)")
+```
+
+***If you look at the graph and if you look at the map the longest are the ones that are not located in the middle of the cities. The longest ones are the ones that are more between the main areas. I used many functions such as colnames, merged.data, and then basic summerise, grouping and select. 
+
+
